@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --font-outfit: 'Outfit', system-ui, sans-serif;
+}
+
+body {
+  background-color: #fffbf4;
+  color: #1a1a1a;
+  font-family: var(--font-outfit);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* Selection colour */
+::selection { background: #D4600E22; }
