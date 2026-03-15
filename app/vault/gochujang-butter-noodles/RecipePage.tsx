@@ -16,83 +16,26 @@ interface TimerState {
   running: boolean;
 }
 
-// ─── YouTube Player Hook ──────────────────────────────────────────────────────
+// ─── YouTube via postMessage (no API script needed, works with plain iframe) ──
 
-declare global {
-  interface Window {
-    YT: {
-      Player: new (
-        el: string | HTMLElement,
-        opts: {
-          videoId: string;
-          playerVars?: Record<string, number | string>;
-          events?: {
-            onReady?: (e: { target: YTPlayer }) => void;
-          };
-        }
-      ) => YTPlayer;
-      ready: (fn: () => void) => void;
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
+function useYouTubeIframe() {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-interface YTPlayer {
-  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-  playVideo: () => void;
-  pauseVideo: () => void;
-  getPlayerState: () => number;
-}
+  const seekTo = useCallback((seconds: number) => {
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    win.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [seconds, true] }), "*");
+    win.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "*");
+  }, []);
 
-function useYouTubePlayer(videoId: string) {
-  const playerRef = useRef<YTPlayer | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const loadAPI = () => {
-      if (window.YT && window.YT.Player) {
-        initPlayer();
-        return;
-      }
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
-      window.onYouTubeIframeAPIReady = initPlayer;
-    };
-
-    const initPlayer = () => {
-      if (!containerRef.current) return;
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId,
-        playerVars: { modestbranding: 1, rel: 0, enablejsapi: 1 },
-        events: {
-          onReady: () => setReady(true),
-        },
-      });
-    };
-
-    loadAPI();
-  }, [videoId]);
-
-  const seekTo = useCallback(
-    (seconds: number) => {
-      if (playerRef.current && ready) {
-        playerRef.current.seekTo(seconds, true);
-        playerRef.current.playVideo();
-      }
-    },
-    [ready]
-  );
-
-  return { containerRef, seekTo, ready };
+  return { iframeRef, seekTo };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Tag({ label }: { label: string }) {
   return (
-    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-cream-card border border-cream-border text-muted capitalize">
+    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-cream-card border border-cream-border text-muted capitalize">
       {label.replace(/-/g, " ")}
     </span>
   );
@@ -101,18 +44,21 @@ function Tag({ label }: { label: string }) {
 function ChefNote({ note }: { note: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <span className="inline-block ml-1.5">
+    <span className="inline-block ml-1.5 align-middle">
       <button
         onClick={() => setOpen(!open)}
         title="Chef's note"
-        className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold transition-colors ${
-          open ? "bg-orange text-white" : "bg-orange-light text-orange border border-orange/30 hover:bg-orange hover:text-white"
+        aria-label="Chef's note"
+        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+          open
+            ? "bg-orange text-white"
+            : "bg-orange-light text-orange border border-orange/30 hover:bg-orange hover:text-white"
         }`}
       >
         C
       </button>
       {open && (
-        <span className="chef-note-enter block mt-2 p-3 bg-orange-light border-l-2 border-orange rounded-r-xl text-sm text-charcoal leading-relaxed italic max-w-sm">
+        <span className="chef-note-enter block mt-2 p-3 bg-orange-light border-l-2 border-orange rounded-r-xl text-sm text-charcoal leading-relaxed italic">
           &ldquo;{note}&rdquo;
         </span>
       )}
@@ -122,11 +68,11 @@ function ChefNote({ note }: { note: string }) {
 
 function AllergenBadge({ allergens }: { allergens: string[] }) {
   return (
-    <span className="inline-flex gap-1 ml-1.5">
+    <span className="inline-flex gap-1 ml-1 align-middle">
       {allergens.map((a) => (
         <span
           key={a}
-          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-2xs font-semibold bg-amber-50 border border-amber-200 text-amber-700"
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-700"
         >
           ⚠ {a}
         </span>
@@ -151,7 +97,7 @@ function FloatingTimers({
   if (timers.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-[220px]">
+    <div className="fixed bottom-20 right-3 z-50 flex flex-col gap-2 w-[200px] sm:bottom-4 sm:right-4 sm:w-[220px]">
       {timers.map((t) => {
         const mins = Math.floor(t.remainingSeconds / 60);
         const secs = t.remainingSeconds % 60;
@@ -161,16 +107,19 @@ function FloatingTimers({
         return (
           <div
             key={t.id}
-            className={`bg-charcoal text-white rounded-2xl p-3 shadow-xl ${t.running ? "timer-running" : ""} ${done ? "bg-green-800" : ""}`}
+            className={`text-white rounded-2xl p-3 shadow-xl ${
+              done ? "bg-green-800" : t.running ? "bg-charcoal timer-running" : "bg-charcoal"
+            }`}
           >
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-start justify-between mb-1">
               <div>
                 <p className="text-xs font-semibold text-white/80">{t.stepLabel}</p>
                 <p className="text-xs text-white/50">{t.label}</p>
               </div>
               <button
                 onClick={() => onDismiss(t.id)}
-                className="text-white/40 hover:text-white text-xs ml-2 leading-none"
+                className="text-white/40 hover:text-white text-sm ml-2 leading-none p-1"
+                aria-label="Dismiss timer"
               >
                 ✕
               </button>
@@ -190,14 +139,14 @@ function FloatingTimers({
                 {!done && (
                   <button
                     onClick={() => onToggle(t.id)}
-                    className="text-xs px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                   >
                     {t.running ? "⏸" : "▶"}
                   </button>
                 )}
                 <button
                   onClick={() => onReset(t.id)}
-                  className="text-xs px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  className="text-xs px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                 >
                   ↺
                 </button>
@@ -224,9 +173,9 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
   const [timers, setTimers] = useState<TimerState[]>([]);
 
   const videoSectionRef = useRef<HTMLDivElement>(null);
-  const { containerRef: ytContainerRef, seekTo } = useYouTubePlayer(recipe.videoId);
+  const { iframeRef, seekTo } = useYouTubeIframe();
 
-  // ── Timer logic ──
+  // ── Timer tick ──
   useEffect(() => {
     const interval = setInterval(() => {
       setTimers((prev) =>
@@ -234,9 +183,9 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
           if (!t.running || t.remainingSeconds === 0) return t;
           const next = t.remainingSeconds - 1;
           if (next === 0) {
-            // Audio alert
             try {
-              const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+              const ctx = new (window.AudioContext ||
+                (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
               const osc = ctx.createOscillator();
               const gain = ctx.createGain();
               osc.connect(gain);
@@ -258,19 +207,14 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
   const startTimer = (stepId: string, stepLabel: string, timerLabel: string, seconds: number) => {
     const existing = timers.find((t) => t.id === stepId);
     if (existing) {
-      setTimers((prev) => prev.map((t) => (t.id === stepId ? { ...t, running: !t.running } : t)));
+      setTimers((prev) =>
+        prev.map((t) => (t.id === stepId ? { ...t, running: !t.running } : t))
+      );
       return;
     }
     setTimers((prev) => [
       ...prev,
-      {
-        id: stepId,
-        label: timerLabel,
-        stepLabel,
-        totalSeconds: seconds,
-        remainingSeconds: seconds,
-        running: true,
-      },
+      { id: stepId, label: timerLabel, stepLabel, totalSeconds: seconds, remainingSeconds: seconds, running: true },
     ]);
   };
 
@@ -282,16 +226,15 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
       prev.map((t) => (t.id === id ? { ...t, remainingSeconds: t.totalSeconds, running: false } : t))
     );
 
-  const dismissTimer = (id: string) =>
-    setTimers((prev) => prev.filter((t) => t.id !== id));
+  const dismissTimer = (id: string) => setTimers((prev) => prev.filter((t) => t.id !== id));
 
-  // ── Video seek + scroll ──
+  // ── Video chapter seek ──
   const handleChapterClick = (seconds: number) => {
     videoSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     setTimeout(() => seekTo(seconds), 400);
   };
 
-  // ── Shopping list ──
+  // ── Shopping list toast ──
   const handleAddToShoppingList = () => {
     setShoppingToast(true);
     setTimeout(() => setShoppingToast(false), 3000);
@@ -309,80 +252,70 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
 
   // ── Ingredient display ──
   const displayIngredient = (ing: Ingredient) => {
-    // Veg swap
-    const name =
-      isVeg && ing.vegSwap ? ing.vegSwap.name : ing.name;
-
-    // Amount
+    const name = isVeg && ing.vegSwap ? ing.vegSwap.name : ing.name;
     let displayAmt = "";
-    if (!ing.isFixed && ing.amount !== null) {
-      const scaled = scaleAmount(ing.amount, recipe.servings, servings) ?? ing.amount;
-      const converted = convertUnit(scaled, ing.unit, unit);
-      displayAmt = `${formatAmount(converted.amount)} ${converted.unit}`.trim();
-    } else if (ing.amount !== null) {
-      const converted = convertUnit(ing.amount, ing.unit, unit);
-      displayAmt = `${formatAmount(converted.amount)} ${converted.unit}`.trim();
+    if (ing.amount !== null) {
+      const base = ing.isFixed
+        ? ing.amount
+        : (scaleAmount(ing.amount, recipe.servings, servings) ?? ing.amount);
+      const converted = convertUnit(base, ing.unit, unit);
+      const amtStr = formatAmount(converted.amount);
+      displayAmt = amtStr ? `${amtStr}${converted.unit ? " " + converted.unit : ""}` : "";
     }
-
     return { name, displayAmt };
   };
 
-  // ── Allergens on this ingredient ──
-  const getActiveWarnings = (ing: Ingredient) => {
-    if (!ing.allergens) return [];
-    return ing.allergens.filter((a) => activeAllergens.has(a));
-  };
+  const getActiveWarnings = (ing: Ingredient) =>
+    ing.allergens?.filter((a) => activeAllergens.has(a)) ?? [];
 
   const ALLERGEN_LIST = ["gluten", "dairy", "eggs", "soy", "shellfish", "nuts"];
-
   const nutrition = isVeg ? recipe.vegNutrition : recipe.nutrition;
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-cream min-h-screen pb-24">
-      {/* ── Kitchen nav bar ── */}
-      <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-cream-border">
+    <div className="bg-cream min-h-screen">
+      {/* ── Sticky kitchen nav ── */}
+      <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-cream-border no-print">
         <div className="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-charcoal">The Noodle Vault</span>
-            <span className="text-cream-border">·</span>
-            <span className="text-xs text-muted">kitchen.cheffatty.com</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-charcoal whitespace-nowrap">The Noodle Vault</span>
+            <span className="text-cream-border hidden sm:inline">·</span>
+            <span className="text-xs text-muted hidden sm:inline">kitchen.cheffatty.com</span>
           </div>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-orange text-white font-semibold">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-orange text-white font-semibold shrink-0">
             🔒 Member
           </span>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-2xl mx-auto px-4 pb-36 sm:pb-10">
 
         {/* ═══════════════════════════════════════════════════
             SECTION 1 — Recipe Header
         ═══════════════════════════════════════════════════ */}
         <section className="pt-8 pb-6">
+          {/* Title + icons row */}
           <div className="flex items-start justify-between gap-4 mb-3">
             <h1 className="font-serif text-3xl font-bold text-charcoal leading-tight">
               {recipe.name}
             </h1>
             <div className="flex items-center gap-2 shrink-0 mt-1">
-              {/* Heart */}
               <button
                 onClick={() => setSaved(!saved)}
                 aria-label={saved ? "Remove from saved" : "Save recipe"}
-                className="w-9 h-9 flex items-center justify-center rounded-full border border-cream-border hover:border-orange transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-full border border-cream-border hover:border-orange transition-colors"
               >
-                <span className={`text-lg transition-all ${saved ? "text-orange scale-110" : "text-muted-light"}`}>
+                <span className={`text-xl transition-all ${saved ? "text-orange" : "text-muted-light"}`}>
                   {saved ? "♥" : "♡"}
                 </span>
               </button>
-              {/* Print */}
               <button
                 onClick={() => window.print()}
                 aria-label="Print recipe"
-                className="w-9 h-9 flex items-center justify-center rounded-full border border-cream-border hover:border-orange transition-colors text-muted-light hover:text-orange no-print"
+                className="w-10 h-10 flex items-center justify-center rounded-full border border-cream-border hover:border-orange transition-colors text-muted-light hover:text-orange no-print"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <polyline points="6 9 6 2 18 2 18 9" />
                   <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                   <rect x="6" y="14" width="12" height="8" />
@@ -391,29 +324,24 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
             </div>
           </div>
 
-          <p className="text-muted text-base leading-relaxed mb-4">{recipe.description}</p>
+          <p className="text-muted text-base leading-relaxed mb-5">{recipe.description}</p>
 
-          {/* Metadata row */}
-          <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 text-sm">
-            <div className="flex items-center gap-1.5 text-charcoal">
-              <span className="text-muted">Prep</span>
-              <span className="font-semibold">{recipe.prepTime}</span>
-            </div>
-            <div className="w-px h-4 bg-cream-border self-center" />
-            <div className="flex items-center gap-1.5 text-charcoal">
-              <span className="text-muted">Cook</span>
-              <span className="font-semibold">{recipe.cookTime}</span>
-            </div>
-            <div className="w-px h-4 bg-cream-border self-center" />
-            <div className="flex items-center gap-1.5 text-charcoal">
-              <span className="text-muted">Serves</span>
-              <span className="font-semibold">{recipe.servings}</span>
-            </div>
-            <div className="w-px h-4 bg-cream-border self-center" />
-            <div className="flex items-center gap-1.5 text-charcoal">
-              <span className="text-muted">Difficulty</span>
-              <span className="font-semibold">{recipe.difficulty}</span>
-            </div>
+          {/* Metadata — pill style, no inline dividers that break on wrap */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {[
+              { label: "Prep", value: recipe.prepTime },
+              { label: "Cook", value: recipe.cookTime },
+              { label: "Serves", value: String(recipe.servings) },
+              { label: "Difficulty", value: recipe.difficulty },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="flex items-center gap-1.5 bg-cream-card border border-cream-border rounded-full px-3 py-1.5 text-sm"
+              >
+                <span className="text-muted">{m.label}</span>
+                <span className="font-semibold text-charcoal">{m.value}</span>
+              </div>
+            ))}
           </div>
 
           {/* Tags */}
@@ -430,13 +358,25 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
             SECTION 2 — Video Player
         ═══════════════════════════════════════════════════ */}
         <section className="py-6" ref={videoSectionRef}>
+          {/* Aspect-ratio container — iframe fills it naturally */}
           <div className="rounded-2xl overflow-hidden bg-charcoal shadow-lg">
-            <div className="youtube-container" ref={ytContainerRef} />
+            <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+              <iframe
+                ref={iframeRef}
+                src={`https://www.youtube.com/embed/${recipe.videoId}?enablejsapi=1&modestbranding=1&rel=0&origin=${
+                  typeof window !== "undefined" ? window.location.origin : ""
+                }`}
+                title="Recipe walkthrough"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            </div>
           </div>
 
           {/* Chapter timestamps */}
           <div className="mt-4">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">Jump to</p>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Jump to</p>
             <div className="flex flex-wrap gap-2">
               {recipe.chapters.map((ch) => {
                 const mins = Math.floor(ch.seconds / 60);
@@ -445,7 +385,7 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                   <button
                     key={ch.seconds}
                     onClick={() => handleChapterClick(ch.seconds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-cream-border bg-white text-sm text-charcoal hover:border-orange hover:text-orange transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-cream-border bg-white text-sm text-charcoal hover:border-orange hover:text-orange transition-colors active:scale-95"
                   >
                     <span className="text-xs font-mono text-muted-light">
                       {mins}:{secs.toString().padStart(2, "0")}
@@ -463,19 +403,26 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
         {/* ═══════════════════════════════════════════════════
             SECTION 3 — Dietary Toggles
         ═══════════════════════════════════════════════════ */}
-        <section className="py-6 space-y-4">
+        <section className="py-6 space-y-3">
           {/* Veg toggle */}
           <div className="flex items-center justify-between p-4 bg-cream-card rounded-2xl border border-cream-border">
             <div>
               <p className="font-semibold text-charcoal text-sm">Vegetarian / Vegan</p>
-              <p className="text-xs text-muted mt-0.5">Swaps all animal proteins to plant-based</p>
+              <p className="text-xs text-muted mt-0.5">Swaps animal proteins to plant-based alternatives</p>
             </div>
             <button
               onClick={() => setIsVeg(!isVeg)}
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${isVeg ? "bg-orange" : "bg-cream-border"}`}
+              role="switch"
+              aria-checked={isVeg}
+              aria-label="Vegetarian / Vegan toggle"
+              className={`relative shrink-0 w-12 h-7 rounded-full transition-colors duration-200 ${
+                isVeg ? "bg-orange" : "bg-cream-border"
+              }`}
             >
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${isVeg ? "translate-x-6" : "translate-x-0.5"}`}
+                className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                  isVeg ? "translate-x-6" : "translate-x-1"
+                }`}
               />
             </button>
           </div>
@@ -490,11 +437,15 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                 <p className="font-semibold text-charcoal text-sm">Allergen Checker</p>
                 <p className="text-xs text-muted mt-0.5">
                   {activeAllergens.size === 0
-                    ? "Select allergens to flag ingredients"
-                    : `${activeAllergens.size} allergen${activeAllergens.size > 1 ? "s" : ""} active`}
+                    ? "Tap to flag ingredients for your allergens"
+                    : `${activeAllergens.size} allergen${activeAllergens.size > 1 ? "s" : ""} active — ingredients flagged below`}
                 </p>
               </div>
-              <span className={`text-muted transition-transform ${allergenOpen ? "rotate-180" : ""}`}>▾</span>
+              <span
+                className={`text-muted text-lg ml-4 transition-transform duration-200 ${allergenOpen ? "rotate-180" : ""}`}
+              >
+                ▾
+              </span>
             </button>
 
             {allergenOpen && (
@@ -503,7 +454,7 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                   <button
                     key={allergen}
                     onClick={() => toggleAllergen(allergen)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors capitalize ${
+                    className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors capitalize ${
                       activeAllergens.has(allergen)
                         ? "bg-amber-500 text-white border-amber-500"
                         : "bg-white border-cream-border text-muted hover:border-amber-400 hover:text-amber-600"
@@ -523,22 +474,26 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
             SECTION 4 — Serving Adjuster + Units
         ═══════════════════════════════════════════════════ */}
         <section className="py-6">
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Serving adjuster */}
             <div className="flex items-center gap-3 bg-cream-card rounded-2xl border border-cream-border px-4 py-2.5">
               <button
                 onClick={() => setServings(Math.max(1, servings - 1))}
-                className="w-7 h-7 rounded-full border border-cream-border text-charcoal font-semibold hover:border-orange hover:text-orange transition-colors flex items-center justify-center text-lg leading-none"
+                aria-label="Decrease servings"
+                className="w-10 h-10 rounded-full border border-cream-border text-charcoal font-bold hover:border-orange hover:text-orange active:scale-95 transition-all flex items-center justify-center text-xl leading-none"
               >
                 −
               </button>
-              <div className="text-center min-w-[60px]">
-                <span className="font-semibold text-charcoal text-lg">{servings}</span>
-                <p className="text-2xs text-muted leading-none mt-0.5">serving{servings !== 1 ? "s" : ""}</p>
+              <div className="text-center min-w-[56px]">
+                <span className="font-semibold text-charcoal text-xl">{servings}</span>
+                <p className="text-xs text-muted leading-none mt-0.5">
+                  serving{servings !== 1 ? "s" : ""}
+                </p>
               </div>
               <button
                 onClick={() => setServings(Math.min(20, servings + 1))}
-                className="w-7 h-7 rounded-full border border-cream-border text-charcoal font-semibold hover:border-orange hover:text-orange transition-colors flex items-center justify-center text-lg leading-none"
+                aria-label="Increase servings"
+                className="w-10 h-10 rounded-full border border-cream-border text-charcoal font-bold hover:border-orange hover:text-orange active:scale-95 transition-all flex items-center justify-center text-xl leading-none"
               >
                 +
               </button>
@@ -550,10 +505,8 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                 <button
                   key={u}
                   onClick={() => setUnit(u)}
-                  className={`px-4 py-2.5 text-sm font-semibold transition-colors capitalize ${
-                    unit === u
-                      ? "bg-charcoal text-white"
-                      : "text-muted hover:text-charcoal"
+                  className={`px-5 py-3 text-sm font-semibold transition-colors ${
+                    unit === u ? "bg-charcoal text-white" : "text-muted hover:text-charcoal"
                   }`}
                 >
                   {u === "imperial" ? "US" : "Metric"}
@@ -576,7 +529,7 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                 <h3 className="text-xs font-bold text-orange uppercase tracking-widest mb-3">
                   {group.name}
                 </h3>
-                <ul className="space-y-3">
+                <ul className="space-y-3.5">
                   {group.ingredients.map((ing) => {
                     const { name, displayAmt } = displayIngredient(ing);
                     const warnings = getActiveWarnings(ing);
@@ -584,10 +537,10 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
 
                     return (
                       <li key={ing.id} className="text-sm">
-                        <div className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange mt-2 shrink-0" />
+                        <div className="flex items-start gap-2.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange mt-[7px] shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 leading-relaxed">
                               {displayAmt && (
                                 <span className="font-semibold text-charcoal">{displayAmt}</span>
                               )}
@@ -604,32 +557,33 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                                 <span className="text-charcoal">{name}</span>
                               )}
                               {ing.isFixed && (
-                                <span className="text-2xs text-muted-light font-medium">(fixed)</span>
+                                <span className="text-xs text-muted-light font-medium">(fixed)</span>
                               )}
                               {warnings.length > 0 && <AllergenBadge allergens={warnings} />}
                               {ing.chefNote && <ChefNote note={ing.chefNote} />}
                             </div>
 
-                            {/* Veg swap note */}
+                            {/* Veg swap */}
                             {isVeg && ing.vegSwap && (
-                              <div className="chef-note-enter mt-2 flex items-start gap-1.5 text-xs text-muted">
-                                <span className="text-green-600 font-semibold shrink-0">↔ Swap:</span>
+                              <div className="chef-note-enter mt-2 p-2.5 bg-green-50 border border-green-200 rounded-xl text-xs text-charcoal leading-relaxed">
+                                <span className="font-semibold text-green-700">↔ Plant-based swap: </span>
                                 <span className="line-through text-muted-light mr-1">{ing.name}</span>
-                                <span className="text-charcoal">{ing.vegSwap.note}</span>
+                                <span>→ <strong>{ing.vegSwap.name}</strong></span>
+                                <span className="text-muted ml-1">— {ing.vegSwap.note}</span>
                               </div>
                             )}
 
-                            {/* Allergen sub */}
+                            {/* Allergen subs */}
                             {hasAllergenSub &&
                               ing.allergenSubs!
                                 .filter((s) => activeAllergens.has(s.allergen))
                                 .map((s) => (
                                   <div
                                     key={s.allergen}
-                                    className="chef-note-enter mt-2 flex items-start gap-1.5 text-xs"
+                                    className="chef-note-enter mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-charcoal leading-relaxed"
                                   >
-                                    <span className="text-amber-600 font-semibold shrink-0">⚑ {s.allergen}:</span>
-                                    <span className="text-charcoal">{s.sub}</span>
+                                    <span className="font-semibold text-amber-700">⚑ {s.allergen}: </span>
+                                    <span>{s.sub}</span>
                                   </div>
                                 ))}
                           </div>
@@ -650,7 +604,7 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
         ═══════════════════════════════════════════════════ */}
         <section className="py-6">
           <h2 className="font-serif text-xl font-bold text-charcoal mb-5">Method</h2>
-          <ol className="space-y-6">
+          <ol className="space-y-7">
             {recipe.steps.map((step, idx) => {
               const activeTimer = timers.find((t) => t.id === step.id);
               const instruction =
@@ -659,26 +613,21 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
               return (
                 <li key={step.id} className="flex gap-4">
                   {/* Step number */}
-                  <div className="shrink-0 w-7 h-7 rounded-full bg-charcoal text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-charcoal text-white text-xs font-bold flex items-center justify-center mt-0.5">
                     {idx + 1}
                   </div>
 
-                  <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex-1 min-w-0 pt-1">
                     <p className="text-sm text-charcoal leading-relaxed">{instruction}</p>
 
-                    {/* Timer + video link row */}
-                    <div className="flex flex-wrap gap-2 mt-2.5">
+                    {/* Timer + video buttons */}
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {step.timer && (
                         <button
                           onClick={() =>
-                            startTimer(
-                              step.id,
-                              `Step ${idx + 1}`,
-                              step.timer!.label,
-                              step.timer!.seconds
-                            )
+                            startTimer(step.id, `Step ${idx + 1}`, step.timer!.label, step.timer!.seconds)
                           }
-                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border transition-all active:scale-95 ${
                             activeTimer?.running
                               ? "bg-orange text-white border-orange"
                               : activeTimer?.remainingSeconds === 0
@@ -687,17 +636,23 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                           }`}
                         >
                           {activeTimer?.running
-                            ? `⏱ ${Math.floor(activeTimer.remainingSeconds / 60)}:${(activeTimer.remainingSeconds % 60).toString().padStart(2, "0")}`
+                            ? `⏱ ${Math.floor(activeTimer.remainingSeconds / 60)}:${(
+                                activeTimer.remainingSeconds % 60
+                              )
+                                .toString()
+                                .padStart(2, "0")}`
                             : activeTimer?.remainingSeconds === 0
                             ? "✓ Done"
-                            : `⏱ ${Math.floor(step.timer.seconds / 60)}:${(step.timer.seconds % 60).toString().padStart(2, "0")} ${step.timer.label}`}
+                            : `⏱ ${Math.floor(step.timer.seconds / 60)}:${(step.timer.seconds % 60)
+                                .toString()
+                                .padStart(2, "0")} ${step.timer.label}`}
                         </button>
                       )}
 
                       {step.videoTimestamp !== undefined && (
                         <button
                           onClick={() => handleChapterClick(step.videoTimestamp!)}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-cream-border bg-cream-card text-muted hover:border-orange hover:text-orange transition-colors"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border border-cream-border bg-cream-card text-muted hover:border-orange hover:text-orange transition-colors active:scale-95"
                         >
                           ▶ Watch this step
                         </button>
@@ -723,14 +678,14 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
             SECTION 7 — Nutrition
         ═══════════════════════════════════════════════════ */}
         <section className="py-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="font-serif text-xl font-bold text-charcoal">Nutrition</h2>
             <span className="text-xs text-muted">
               per serving · {servings} serving{servings !== 1 ? "s" : ""} total
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2.5">
             {[
               { label: "Calories", value: nutrition.calories, unit: "" },
               { label: "Protein", value: nutrition.protein, unit: "g" },
@@ -741,11 +696,11 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
                 key={n.label}
                 className="bg-cream-card border border-cream-border rounded-2xl p-3 text-center"
               >
-                <p className="text-lg font-bold text-charcoal font-serif">
+                <p className="text-lg font-bold text-charcoal font-serif leading-none mb-1">
                   {n.value}
                   <span className="text-sm font-sans font-normal text-muted">{n.unit}</span>
                 </p>
-                <p className="text-2xs text-muted mt-0.5 font-medium uppercase tracking-wide">
+                <p className="text-xs text-muted font-medium uppercase tracking-wide leading-none">
                   {n.label}
                 </p>
               </div>
@@ -753,20 +708,16 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
           </div>
 
           {isVeg && (
-            <p className="text-xs text-green-700 mt-2.5 font-medium">
-              ✓ Showing vegetarian macros
-            </p>
+            <p className="text-xs text-green-700 mt-2.5 font-medium">✓ Showing vegetarian macros</p>
           )}
         </section>
 
-        <hr className="border-cream-border" />
-
         {/* ═══════════════════════════════════════════════════
-            SECTION 8 — Action Bar
+            SECTION 8 — Action Bar (inline, above sticky bar)
         ═══════════════════════════════════════════════════ */}
-        <section className="py-6">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Add to shopping list */}
+        {/* Desktop-only inline version */}
+        <section className="py-6 hidden sm:block">
+          <div className="flex gap-3">
             <button
               onClick={handleAddToShoppingList}
               className="flex-1 flex items-center justify-center gap-2 bg-charcoal text-white font-semibold text-sm py-3.5 rounded-2xl hover:bg-charcoal/90 transition-colors"
@@ -778,8 +729,6 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
               </svg>
               Add to Shopping List
             </button>
-
-            {/* Save */}
             <button
               onClick={() => setSaved(!saved)}
               className={`flex-1 flex items-center justify-center gap-2 font-semibold text-sm py-3.5 rounded-2xl border-2 transition-colors ${
@@ -791,8 +740,6 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
               <span className="text-base">{saved ? "♥" : "♡"}</span>
               {saved ? "Saved" : "Save Recipe"}
             </button>
-
-            {/* Print */}
             <button
               onClick={() => window.print()}
               className="flex-1 flex items-center justify-center gap-2 font-semibold text-sm py-3.5 rounded-2xl border-2 border-cream-border text-muted hover:border-orange hover:text-orange transition-colors no-print"
@@ -807,7 +754,42 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
           </div>
         </section>
 
-      </div>{/* end max-w container */}
+      </div>
+
+      {/* ── Sticky action bar — mobile only ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-cream/95 backdrop-blur border-t border-cream-border px-4 py-3 sm:hidden no-print">
+        <div className="flex gap-2.5 max-w-2xl mx-auto">
+          <button
+            onClick={handleAddToShoppingList}
+            className="flex-1 flex items-center justify-center gap-2 bg-charcoal text-white font-semibold text-sm py-3.5 rounded-2xl active:scale-95 transition-all"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            Add to List
+          </button>
+          <button
+            onClick={() => setSaved(!saved)}
+            className={`w-14 flex items-center justify-center rounded-2xl border-2 transition-all active:scale-95 ${
+              saved ? "bg-orange-light border-orange text-orange" : "border-cream-border text-muted"
+            }`}
+          >
+            <span className="text-xl">{saved ? "♥" : "♡"}</span>
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="w-14 flex items-center justify-center rounded-2xl border-2 border-cream-border text-muted active:scale-95 transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
       {/* ── Floating Timers ── */}
       <FloatingTimers
@@ -819,7 +801,7 @@ export default function RecipePage({ recipe }: { recipe: Recipe }) {
 
       {/* ── Shopping list toast ── */}
       {shoppingToast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-charcoal text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 chef-note-enter">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-charcoal text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 chef-note-enter sm:bottom-6 whitespace-nowrap">
           <span>✓</span> Added to shopping list
         </div>
       )}
