@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
-  title: "Chef Fatty",
-  description: "Asian-inspired recipes for home cooks.",
+  title: "The Noodle Vault — Chef Fatty Kitchen",
+  description: "20 exclusive noodle recipes with guided video walkthroughs. Your kitchen, your pace.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-cream min-h-screen">
-        <Nav />
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );

@@ -5,18 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: "#fffbf4",
-        "cream-card": "#fff8ed",
-        "cream-border": "#e8ddd0",
+        cream: "#FAF7F2",
+        "cream-card": "#F3EEE6",
+        "cream-border": "#E8E0D0",
         orange: "#D4600E",
-        "orange-light": "#f97316",
-        charcoal: "#1a1a1a",
-        muted: "#78716c",
-        subtle: "#a8a29e",
+        "orange-hover": "#B85209",
+        "orange-light": "#F5EAE0",
+        charcoal: "#1C1917",
+        muted: "#6B6560",
+        "muted-light": "#A09890",
       },
       fontFamily: {
-        serif: ["Georgia", "serif"],
-        sans: ["var(--font-outfit)", "system-ui", "sans-serif"],
+        serif: ["Georgia", "Times New Roman", "serif"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
     },
   },
