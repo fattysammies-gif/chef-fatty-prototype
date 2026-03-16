@@ -3,6 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+function HomeIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke={active ? "#C85C0A" : "#A09890"} strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
+      <path d="M9 21V12h6v9" />
+    </svg>
+  );
+}
+
 function VaultIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -47,6 +58,7 @@ function SlidersIcon({ active }: { active: boolean }) {
 }
 
 const TABS = [
+  { href: "/dashboard", label: "Home", Icon: HomeIcon },
   { href: "/vault", label: "Vault", Icon: VaultIcon },
   { href: "/shopping-list", label: "Shopping", Icon: BagIcon },
   { href: "/settings", label: "Settings", Icon: SlidersIcon },
@@ -57,16 +69,31 @@ export default function BottomNav() {
   if (pathname === "/onboarding" || pathname === "/") return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-ivory/95 backdrop-blur-md border-t border-ivory-border no-print"
-      style={{ boxShadow: "0 -1px 0 rgba(226, 217, 204, 0.8), 0 -8px 24px rgba(26, 23, 20, 0.04)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-ivory/95 backdrop-blur-md border-t border-ivory-border no-print"
+      style={{
+        boxShadow: "0 -1px 0 rgba(226, 217, 204, 0.8), 0 -8px 24px rgba(26, 23, 20, 0.04)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       <div className="max-w-lg mx-auto h-16 flex items-center">
         {TABS.map(({ href, label, Icon }) => {
-          const active = pathname === href || (href !== "/vault" && pathname.startsWith(href + "/")) || (href === "/vault" && (pathname === "/vault" || pathname.startsWith("/vault/")));
+          const active =
+            pathname === href ||
+            (href === "/vault" && (pathname === "/vault" || pathname.startsWith("/vault/"))) ||
+            (href !== "/vault" && href !== "/dashboard" && pathname.startsWith(href + "/"));
           return (
-            <Link key={href} href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-1 h-full min-h-[44px]">
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center justify-center gap-1 h-full min-h-[44px]"
+            >
               <Icon active={active} />
-              <span className={`text-[10px] font-medium tracking-wider uppercase ${active ? "text-sienna" : "text-stone-light"}`}>
+              <span
+                className={`text-[10px] font-medium tracking-wider uppercase ${
+                  active ? "text-sienna" : "text-stone-light"
+                }`}
+              >
                 {label}
               </span>
             </Link>

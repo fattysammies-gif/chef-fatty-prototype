@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import TopNav from "@/components/TopNav";
 
 export const metadata: Metadata = {
   title: "The Noodle Vault — Chef Fatty",
@@ -11,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-ivory min-h-screen">
+        <TopNav />
         <main>{children}</main>
         <BottomNav />
       </body>

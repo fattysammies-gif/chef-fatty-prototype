@@ -13,7 +13,7 @@ export default function Home() {
       if (raw) {
         const prefs = JSON.parse(raw);
         if (prefs.hasOnboarded) {
-          router.replace("/vault");
+          router.replace("/dashboard");
           return;
         }
       }
