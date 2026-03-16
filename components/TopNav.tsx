@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/vault", label: "Vault" },
-  { href: "/shopping-list", label: "Shopping List" },
-  { href: "/settings", label: "Settings" },
+  { href: "/guide", label: "Guide", match: ["/guide", "/fundamentals"] },
+  { href: "/vault", label: "Vault", match: ["/vault"] },
+  { href: "/shopping-list", label: "Shopping List", match: ["/shopping-list"] },
+  { href: "/settings", label: "Settings", match: ["/settings"] },
 ];
 
 export default function TopNav() {
   const pathname = usePathname();
-  if (pathname === "/" || pathname === "/onboarding") return null;
+  if (pathname === "/" || pathname === "/onboarding" || pathname === "/guide") return null;
 
   return (
     <header
@@ -30,11 +31,10 @@ export default function TopNav() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          {LINKS.map(({ href, label }) => {
-            const active =
-              pathname === href ||
-              (href === "/vault" && pathname.startsWith("/vault/")) ||
-              (href !== "/vault" && pathname.startsWith(href + "/"));
+          {LINKS.map(({ href, label, match }) => {
+            const active = match.some(
+              (m) => pathname === m || pathname.startsWith(m + "/")
+            );
             return (
               <Link
                 key={href}

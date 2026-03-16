@@ -13,7 +13,7 @@ export default function RecipePlaceholderPage() {
       <div className="min-h-screen bg-ivory flex flex-col items-center justify-center px-6 text-center">
         <p className="font-serif text-2xl text-charcoal mb-3">Recipe not found</p>
         <Link href="/vault" className="text-sm text-sienna underline underline-offset-4">
-          ← Back to Vault
+          Back to Vault
         </Link>
       </div>
     );
@@ -23,7 +23,6 @@ export default function RecipePlaceholderPage() {
     <div className="min-h-screen bg-ivory pb-28 page-transition">
       <div className="max-w-lg mx-auto px-6">
 
-        {/* Back */}
         <div className="pt-12 pb-6">
           <Link href="/vault"
             className="inline-flex items-center gap-2 text-sm text-stone hover:text-charcoal transition-colors group">
@@ -35,7 +34,6 @@ export default function RecipePlaceholderPage() {
           </Link>
         </div>
 
-        {/* Hero card */}
         <div className="relative w-full rounded-3xl overflow-hidden shadow-card mb-6"
           style={{ background: recipe.gradient, aspectRatio: "16/9" }}>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -47,7 +45,6 @@ export default function RecipePlaceholderPage() {
           </div>
         </div>
 
-        {/* Meta pills */}
         <div className="flex flex-wrap gap-2 mb-8">
           {[
             { label: "Prep", value: recipe.prepTime },
@@ -62,29 +59,19 @@ export default function RecipePlaceholderPage() {
           ))}
         </div>
 
-        {/* Coming soon */}
         <div className="bg-ivory-card border border-ivory-border rounded-3xl p-8 text-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-gold-faint flex items-center justify-center mx-auto mb-5">
-            <span style={{ fontSize: 28 }}>🔒</span>
+          <div className="w-12 h-12 rounded-full bg-ivory-border flex items-center justify-center mx-auto mb-4">
+            <span style={{ fontSize: 22 }}>📽️</span>
           </div>
           <p className="text-xs uppercase tracking-label font-medium text-stone-light mb-2">Coming soon</p>
-          <p className="font-serif text-2xl text-charcoal leading-tight mb-3">
-            Full recipe in production
+          <p className="font-serif text-xl text-charcoal leading-tight mb-2">
+            Recipe in production
           </p>
-          <p className="text-stone text-sm leading-relaxed mb-6">
-            This recipe is being filmed and edited. Join the Chef Fatty Club to get early access to all 20 recipes.
+          <p className="text-stone text-sm leading-relaxed">
+            This recipe is being filmed and edited. Check back at launch.
           </p>
-          <a href="https://club.cheffatty.com" target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-sienna text-white rounded-2xl px-8 py-4 font-semibold text-sm hover:bg-sienna-hover transition-colors active:scale-95">
-            Join the Club
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </a>
         </div>
 
-        {/* Tags */}
         <div className="flex flex-wrap gap-2">
           {recipe.tags.map((tag) => (
             <span key={tag}

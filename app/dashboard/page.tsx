@@ -24,30 +24,9 @@ export default function DashboardPage() {
                 Your Kitchen
               </h1>
               <p className="text-stone text-sm mt-2">
-                {RECIPE_SUMMARIES.length} recipes ready to cook
+                {RECIPE_SUMMARIES.length} recipes · video-guided · your pace
               </p>
             </div>
-
-            {/* Pre-order banner — mobile only */}
-            <Link
-              href="https://club.cheffatty.com"
-              target="_blank"
-              className="md:hidden flex items-center gap-4 bg-gradient-to-r from-sienna to-sienna-hover rounded-2xl px-5 py-4 mb-7 group"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-xs uppercase tracking-label font-semibold text-white/70 mb-1">
-                  Pre-order · $9
-                </p>
-                <p className="text-white font-semibold text-sm leading-snug">
-                  Get lifetime access + video walkthroughs
-                </p>
-              </div>
-              <div className="shrink-0 w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </div>
-            </Link>
 
             {/* Start Here label */}
             <p className="text-xs uppercase tracking-label font-medium text-stone-light mb-4">
@@ -61,7 +40,7 @@ export default function DashboardPage() {
                 style={{ background: featured.gradient, aspectRatio: "16/9" }}
               >
                 <div className="absolute top-4 left-4 bg-gold text-white text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
-                  Demo Recipe
+                  Walkthrough Recipe
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="drop-shadow-lg" style={{ fontSize: 64 }}>{featured.emoji}</span>
@@ -121,46 +100,33 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Vault teaser */}
-            <div className="bg-ivory-card border border-ivory-border rounded-2xl px-5 py-4 mb-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-charcoal">19 more recipes</p>
-                  <p className="text-xs text-stone mt-0.5">
-                    Full vault unlocks with your pre-order
-                  </p>
-                </div>
-                <span className="text-2xl">🔒</span>
-              </div>
-            </div>
-
           </div>
 
           {/* ── Desktop sidebar ── */}
           <div className="hidden md:block space-y-5 pt-6">
 
-            {/* Club presale card */}
+            {/* Framework Guide card */}
             <Link
-              href="https://club.cheffatty.com"
-              target="_blank"
-              className="block bg-gradient-to-br from-sienna to-sienna-hover rounded-3xl p-6 group hover:shadow-card-hover transition-shadow"
+              href="/guide"
+              className="block bg-gradient-to-br from-charcoal to-charcoal-soft rounded-3xl p-6 group hover:shadow-card-hover transition-shadow"
             >
-              <p className="text-xs uppercase tracking-label font-semibold text-white/70 mb-2">
-                Limited Pre-Order
+              <p className="text-xs uppercase tracking-label font-semibold text-white/50 mb-2">
+                The Framework
               </p>
               <p className="font-serif text-2xl text-white mb-3 leading-snug">
-                The Noodle<br />Vault
+                The Noodle<br />System
               </p>
-              <p className="text-white/80 text-sm mb-6 leading-relaxed">
-                Lifetime access to all 20 recipes with video walkthroughs, ingredient swaps, and cook mode.
+              <p className="text-white/70 text-sm mb-6 leading-relaxed">
+                6 components. Infinite combinations. Learn the system that powers every recipe in the vault.
               </p>
               <div className="flex items-center justify-between">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-white text-2xl font-bold">$9</span>
-                  <span className="text-white/50 text-sm line-through">$14</span>
+                <div className="flex gap-1.5">
+                  {["🧂","🍜","🥩","🥬","🧄","✨"].map((e, i) => (
+                    <span key={i} className="text-base">{e}</span>
+                  ))}
                 </div>
-                <div className="bg-white text-sienna text-sm font-semibold px-4 py-2 rounded-xl group-hover:bg-ivory-card transition-colors">
-                  Pre-order →
+                <div className="bg-white/10 text-white text-sm font-semibold px-4 py-2 rounded-xl group-hover:bg-white/20 transition-colors">
+                  Open →
                 </div>
               </div>
             </Link>
@@ -173,6 +139,7 @@ export default function DashboardPage() {
               <div className="space-y-0">
                 {[
                   { href: "/vault", label: "All Recipes" },
+                  { href: "/fundamentals", label: "The Framework" },
                   { href: "/shopping-list", label: "Shopping List" },
                   { href: "/settings", label: "Preferences" },
                 ].map(({ href, label }, i, arr) => (

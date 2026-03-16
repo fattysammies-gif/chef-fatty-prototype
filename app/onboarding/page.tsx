@@ -30,7 +30,7 @@ export default function OnboardingPage() {
       setStep((s) => s + 1);
     } else {
       setPrefs({ hasOnboarded: true, unit, diet, allergens, servings });
-      router.push("/dashboard");
+      const guideSeen = localStorage.getItem("nv_guide_seen"); router.push(guideSeen ? "/vault" : "/guide");
     }
   }
 
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
               className="w-full bg-sienna text-white rounded-2xl py-4 font-semibold text-base hover:bg-sienna-hover transition-colors">
               Let&apos;s get started →
             </button>
-            <button onClick={() => { setPrefs({ hasOnboarded: true }); router.push("/dashboard"); }}
+            <button onClick={() => { setPrefs({ hasOnboarded: true }); const guideSeen = localStorage.getItem("nv_guide_seen"); router.push(guideSeen ? "/vault" : "/guide"); }}
               className="mt-5 text-sm text-stone-light underline underline-offset-4 hover:text-stone transition-colors">
               Skip setup
             </button>

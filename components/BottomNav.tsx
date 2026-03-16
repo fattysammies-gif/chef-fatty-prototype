@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function HomeIcon({ active }: { active: boolean }) {
+function GuideIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
       stroke={active ? "#C85C0A" : "#A09890"} strokeWidth="1.8"
       strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
-      <path d="M9 21V12h6v9" />
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+      <line x1="9" y1="7" x2="15" y2="7" />
+      <line x1="9" y1="11" x2="15" y2="11" />
     </svg>
   );
 }
@@ -58,15 +60,15 @@ function SlidersIcon({ active }: { active: boolean }) {
 }
 
 const TABS = [
-  { href: "/dashboard", label: "Home", Icon: HomeIcon },
-  { href: "/vault", label: "Vault", Icon: VaultIcon },
-  { href: "/shopping-list", label: "Shopping", Icon: BagIcon },
-  { href: "/settings", label: "Settings", Icon: SlidersIcon },
+  { href: "/fundamentals", label: "Guide", Icon: GuideIcon, matchPrefixes: ["/guide", "/fundamentals"] },
+  { href: "/vault", label: "Vault", Icon: VaultIcon, matchPrefixes: ["/vault"] },
+  { href: "/shopping-list", label: "Shopping", Icon: BagIcon, matchPrefixes: ["/shopping-list"] },
+  { href: "/settings", label: "Settings", Icon: SlidersIcon, matchPrefixes: ["/settings"] },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  if (pathname === "/onboarding" || pathname === "/") return null;
+  if (pathname === "/onboarding" || pathname === "/" || pathname === "/guide") return null;
 
   return (
     <nav
@@ -77,11 +79,10 @@ export default function BottomNav() {
       }}
     >
       <div className="max-w-lg mx-auto h-16 flex items-center">
-        {TABS.map(({ href, label, Icon }) => {
-          const active =
-            pathname === href ||
-            (href === "/vault" && (pathname === "/vault" || pathname.startsWith("/vault/"))) ||
-            (href !== "/vault" && href !== "/dashboard" && pathname.startsWith(href + "/"));
+        {TABS.map(({ href, label, Icon, matchPrefixes }) => {
+          const active = matchPrefixes.some((prefix) =>
+            pathname === prefix || pathname.startsWith(prefix + "/")
+          );
           return (
             <Link
               key={href}
